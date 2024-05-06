@@ -1,5 +1,33 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+
+# Function to initialize a cubic grid
+def initialize_grid(N):
+    return np.full((N, N, N), 1)
+
+# Function to plot the cubic grid
+def plot_grid(grid):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    N = grid.shape[0]
+    x, y, z = np.indices((N, N, N))  # Create 3D grid indices
+
+    # Plot points for spins with value 1
+    ax.scatter(x[grid == 1], y[grid == 1], z[grid == 1], color='r', marker='o', label='Spin Up')
+    # Plot points for spins with value -1
+    ax.scatter(x[grid == -1], y[grid == -1], z[grid == -1], color='b', marker='o', label='Spin Down')
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('Cubic Grid Visualization')
+    ax.legend()
+
+    plt.show()
+
 
 # Function to initialize spins randomly
 def initialize_spins(N):
@@ -7,8 +35,7 @@ def initialize_spins(N):
     return spins
 
 # Function to calculate energy of a spin configuration
-def calculate_energy(spins, J, H):
-    N = spins.shape[0]
+def calculate_energy(spins, N, J, H):
     energy = 0
     for i in range(N):
         for j in range(N):
@@ -33,7 +60,7 @@ def monte_carlo_step(spins, J, H, T):
 
 # Function to run the simulation
 def simulate(N, J, H, T, steps):
-    spins = initialize_spins(N)
+    spins = initialize_grid(N)
     energies = np.zeros(steps)
     for step in range(steps):
         spins = monte_carlo_step(spins, J, H, T)
@@ -42,6 +69,7 @@ def simulate(N, J, H, T, steps):
 
 # Main function
 def main():
+    plot_grid(initialize_grid(10))
     N = 10  # Size of the grid
     J = 1   # Interaction strength
     H = 0   # External magnetic field
@@ -50,12 +78,14 @@ def main():
 
     spins, energies = simulate(N, J, H, T, steps)
 
+    print("Energy of the spin configuration of 3 , 3: ", calculate_energy(spins, N, J, H))
+
     # Plot energy vs. step
-    plt.plot(energies)
-    plt.xlabel('Step')
-    plt.ylabel('Energy')
-    plt.title('Energy vs. Step')
-    plt.show()
+    # plt.plot(energies)
+    # plt.xlabel('Step')
+    # plt.ylabel('Energy')
+    # plt.title('Energy vs. Step')
+    # plt.show()
 
 if __name__ == "__main__":
     main()
