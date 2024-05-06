@@ -45,6 +45,26 @@ def calculate_energy(spins, N, J, H):
                                                   spins[i, j, (k+1)%N] + spins[i, j, (k-1)%N]) - H * spins[i, j, k]
     return energy
 
+
+def compute_energy_change(spins, i, j, k, N, J, H):
+    current_spin = spins[i, j, k]
+    
+    # Neighboring spins
+    neighbors_sum = spins[(i+1)%N, j, k] + spins[(i-1)%N, j, k] + \
+                    spins[i, (j+1)%N, k] + spins[i, (j-1)%N, k] + \
+                    spins[i, j, (k+1)%N] + spins[i, j, (k-1)%N]
+    
+    # Contribution to energy from neighboring spins
+    energy_from_neighbors = -J * current_spin * neighbors_sum
+    
+    # Contribution to energy from external magnetic field
+    energy_from_field = -H * current_spin
+    
+    # Total energy change
+    delta_E = 2 * (energy_from_neighbors + energy_from_field)
+    
+    return delta_E
+
 # Function to perform a Monte Carlo step
 def monte_carlo_step(spins, J, H, T):
     N = spins.shape[0]
@@ -69,16 +89,17 @@ def simulate(N, J, H, T, steps):
 
 # Main function
 def main():
-    plot_grid(initialize_grid(10))
+    initial_grid = initialize_grid(10)
+    # plot_grid(initial_grid)
     N = 10  # Size of the grid
     J = 1   # Interaction strength
     H = 0   # External magnetic field
     T = 1   # Temperature
     steps = 1000  # Number of Monte Carlo steps
 
-    spins, energies = simulate(N, J, H, T, steps)
+    # spins, energies = simulate(N, J, H, T, steps)
 
-    print("Energy of the spin configuration of 3 , 3: ", calculate_energy(spins, N, J, H))
+    print("Energy of the spin configuration of 3 , 3 , 3: ", compute_energy_change(initial_grid, 3, 3, 3, N, J, H))
 
     # Plot energy vs. step
     # plt.plot(energies)
