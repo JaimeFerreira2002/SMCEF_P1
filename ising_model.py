@@ -289,11 +289,11 @@ def hysteresis(hs, temps, size, initial, cycles):
     return m
 
 # Define magnetic field strengths and temperatures
-#hs = np.arange(-5, 5.5, .5)
+hs = np.arange(-5, 5.5, .5)
 temps = np.arange(0.5, 5.5, .1)  
 
 
-#m = hysteresis(hs, temps, 10, 2, 1000) 
+m = hysteresis(hs, temps, 10, 2, 1000) 
 #fig3 = hyst_graph(m, hs, temps)
 
 
@@ -301,9 +301,11 @@ m, sus, e, c = simulacao_temp(temps, 10, 3, 1000, 1)
 fig1 = ferro_graft(m, sus, e, c, temps)
 
 
-#m1, sus1, e1, c1 = simul_h(hs, 10, 2, 1000,1)
-#fig2 = ferro_grafh(m1, sus1, e1, c1, hs)
+m1, sus1, e1, c1 = simul_h(hs, 10, 2, 1000,1)
+fig2 = ferro_grafh(m1, sus1, e1, c1, hs)
 plt.show()
+
+
 
 
    
