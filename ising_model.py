@@ -1,112 +1,313 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 
-# Function to initialize a cubic grid
-def initialize_grid(N):
-    return np.full((N, N, N), 1)
 
-# Function to plot the cubic grid
-def plot_grid(grid):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+def initialize_grid(size, initial):
+    
+    if initial == -1:
+        return np.full((size, size, size), -1)
+    else:
+        return np.full((size, size, size), np.random.choice([-1,1], size = (size, size, size)))
 
-    N = grid.shape[0]
-    x, y, z = np.indices((N, N, N))  # Create 3D grid indices
+               
+def transitionvalues(t, h):
+    
+    possible_values_sum = np.arange(-6, 8, 2)
+    possible_spins = np.arange(-1, 3, 2)
+    
+    num = [[j + i * h for i in possible_spins] for j in possible_values_sum]
+    transvalue = [[1 if elem <= 0 else np.exp( - elem / t) for elem in row] for row in num]
+   
+    return np.array(transvalue)
+    
+    
+             
+def neighborstable(size):
+    
+    
+    positive = [i + 1 for i in range(size)]
+    positive[-1] = 0
+    negative = [i - 1 for i in range(size)]
+    
+       
+    return np.array([positive, negative])
 
-    # Plot points for spins with value 1
-    ax.scatter(x[grid == 1], y[grid == 1], z[grid == 1], color='r', marker='o', label='Spin Up')
-    # Plot points for spins with value -1
-    ax.scatter(x[grid == -1], y[grid == -1], z[grid == -1], color='b', marker='o', label='Spin Down')
 
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title('Cubic Grid Visualization')
-    ax.legend()
-
-    plt.show()
+def w(sigma, sigmasum, transvalue):
+    
+    
+    i = int(sigmasum / 2 + 3)
+    j = int(sigma / 2 + 1 / 2)
+    
+    return transvalue[i, j]
 
 
-# Function to initialize spins randomly
-def initialize_spins(N):
-    spins = np.random.choice([-1, 1], size=(N, N, N))
-    return spins
 
-# Function to calculate energy of a spin configuration
-def calculate_energy(spins, N, J, H):
+ 
+def calc_sus(size, order, t):
+    """
+    ...
+    """
+    
+    return order.var() * size ** 3 / t
+    
+   
+
+def calc_cap(size, e, t):
+    """
+    ...
+    """
+
+    return e.var() / (size ** 3 * t ** 2)
+    
+def cycle(grid, size, neighbors, transvalue, h):
+    
     energy = 0
-    for i in range(N):
-        for j in range(N):
-            for k in range(N):
-                energy += -J * spins[i, j, k] * (spins[(i+1)%N, j, k] + spins[(i-1)%N, j, k] +
-                                                  spins[i, (j+1)%N, k] + spins[i, (j-1)%N, k] +
-                                                  spins[i, j, (k+1)%N] + spins[i, j, (k-1)%N]) - H * spins[i, j, k]
-    return energy
-
-
-def compute_energy_change(spins, i, j, k, N, J, H):
-    current_spin = spins[i, j, k]
+    moment = 0
+    for i in range(size):
+        for j in range(size):
+            for k in range(size):
+            
+                sigma = grid[i, j, k] 
+            
+                sigmasum = grid[neighbors[0, i], j, k] + grid[neighbors[1, i], j, k] + grid[i, neighbors[0, j], k] + grid[i, neighbors[1, j], k] + grid[i, j, neighbors[0, k]] + grid[i, j, neighbors[1, k]]
+                sigmasum = sigmasum * sigma
+                moment += abs(sigmasum)
+                
+                
+                energy_point = -0.5 * sigmasum - sigma * h 
+                
+               
+                p = np.random.random()
+            
+                if p < w(sigma, sigmasum, transvalue):
+                    grid[i, j, k] = -sigma 
+                    energy_point = -energy_point
+                    
+                energy += energy_point
+                    
     
-    # Neighboring spins
-    neighbors_sum = spins[(i+1)%N, j, k] + spins[(i-1)%N, j, k] + \
-                    spins[i, (j+1)%N, k] + spins[i, (j-1)%N, k] + \
-                    spins[i, j, (k+1)%N] + spins[i, j, (k-1)%N]
+   
+    return grid, energy
+
+def simulation(size, initial, cycles, t, h):
     
-    # Contribution to energy from neighboring spins
-    energy_from_neighbors = -J * current_spin * neighbors_sum
     
-    # Contribution to energy from external magnetic field
-    energy_from_field = -H * current_spin
+    grid = initialize_grid(size, initial)
     
-    # Total energy change
-    delta_E = 2 * (energy_from_neighbors + energy_from_field)
+    transvalue = transitionvalues(t, h)
     
-    return delta_E
+    neighbors = neighborstable(size)
+    
+   
+    order = np.zeros(cycles)
+    total_energy = np.zeros(cycles)
+    
+    
+    for i in range(cycles):
+        
+        grelha, energy = cycle(grid, size, neighbors, transvalue, h)
+        
+       
+        total_energy[i] = energy
+        order[i] = 2 * grid[grid == 1].shape[0] - size ** 3
+        
+    
+    order /= size**3
+    total_energy /= size **3
+    
+    
+                
+    return grid, order, total_energy
 
-# Function to perform a Monte Carlo step
-def monte_carlo_step(spins, J, H, T):
-    N = spins.shape[0]
-    i = np.random.randint(N)
-    j = np.random.randint(N)
-    k = np.random.randint(N)
-    dE = 2 * J * spins[i, j, k] * (spins[(i+1)%N, j, k] + spins[(i-1)%N, j, k] +
-                                   spins[i, (j+1)%N, k] + spins[i, (j-1)%N, k] +
-                                   spins[i, j, (k+1)%N] + spins[i, j, (k-1)%N]) + 2 * H * spins[i, j, k]
-    if dE <= 0 or np.random.rand() < np.exp(-dE / T):
-        spins[i, j, k] *= -1
-    return spins
 
-# Function to run the simulation
-def simulate(N, J, H, T, steps):
-    spins = initialize_grid(N)
-    energies = np.zeros(steps)
-    for step in range(steps):
-        spins = monte_carlo_step(spins, J, H, T)
-        energies[step] = calculate_energy(spins, J, H)
-    return spins, energies
+def ferro_graft(m, sus, e, c, t):
+    """
+    ...
+    """
+    
+    fig = plt.figure()
+    axm = fig.add_subplot(2, 2, 1)
+    axm.plot(t, m)
+    axm.set_title('m vs t')
+    axm.set_ylabel(r'm')
+    axm.set_xlabel(r't')
+    
+    axs = fig.add_subplot(2, 2, 2)
+    axs.plot(t, sus)
+    axs.set_title('$\chi$  vs  t')
+    axs.set_ylabel(r'$\chi$')
+    axs.set_xlabel(r't')
+    
+    axe = fig.add_subplot(2, 2, 3)
+    axe.plot(t, e)
+    axe.set_title('e vs t')
+    axe.set_ylabel(r'e')
+    axe.set_xlabel(r't')
+    
+    axc = fig.add_subplot(2, 2, 4)
+    axc.plot(t, c)
+    axc.set_title('C vs t')
+    axc.set_ylabel(r'C')
+    axc.set_xlabel(r't')
+    axc.ticklabel_format(useMathText=True, style='sci')
+    
+    fig.set_size_inches(12, 12)
+    
+    
+    
+    
+    return fig
 
-# Main function
-def main():
-    initial_grid = initialize_grid(10)
-    # plot_grid(initial_grid)
-    N = 10  # Size of the grid
-    J = 1   # Interaction strength
-    H = 0   # External magnetic field
-    T = 1   # Temperature
-    steps = 1000  # Number of Monte Carlo steps
+def ferro_grafh(m, sus, e, c, h):
+    """
+    ...
+    """
+    
+    fig = plt.figure()
+    axm = fig.add_subplot(2, 2, 1)
+    axm.plot(h, m)
+    axm.set_title('m vs h')
+    axm.set_ylabel(r'm')
+    axm.set_xlabel(r'h')
+    
+    axs = fig.add_subplot(2, 2, 2)
+    axs.plot(h, sus)
+    axs.set_title('$\chi$  vs  h')
+    axs.set_ylabel(r'$\chi$')
+    axs.set_xlabel(r'h')
+    
+    axe = fig.add_subplot(2, 2, 3)
+    axe.plot(h, e)
+    axe.set_title('e vs h')
+    axe.set_ylabel(r'e')
+    axe.set_xlabel(r'h')
+    
+    axc = fig.add_subplot(2, 2, 4)
+    axc.plot(h, c)
+    axc.set_title('C vs h')
+    axc.set_ylabel(r'C')
+    axc.set_xlabel(r'h')
+    axc.ticklabel_format(useMathText=True, style='sci')
+    
+    fig.set_size_inches(12, 12)
+    
+    
+    
+    
+    return fig
 
-    # spins, energies = simulate(N, J, H, T, steps)
 
-    print("Energy of the spin configuration of 3 , 3 , 3: ", compute_energy_change(initial_grid, 3, 3, 3, N, J, H))
+def hyst_graph(m, hs, temps):
+    
+    plt.figure(figsize=(12, 12))
+    for i, temp in enumerate(temps):
+        plt.plot(hs, m[i], label=f'Temperature: {temp}')
+    plt.title('m vs h with different temperatures')
+    plt.xlabel('h')
+    plt.ylabel('m')
+    plt.legend()
+    
+    
+    
+def simulacao_temp(temps, size, initial, nmax, h):
+    """
+    ...
+    """
+    
+    n_pontos = temps.size
+    # Inicializa os vetores para recolher os valores
+    m = np.zeros(n_pontos)
+    sus = np.zeros(n_pontos)
+    e = np.zeros(n_pontos)
+    c = np.zeros(n_pontos)
+    
+    start_indx = int(nmax / 100)
+    
+    indx = 0
+    for t in temps:
+        
+        _, order, en = simulation(size, initial, nmax, t, h)
+        
+        order = np.abs(order[start_indx:])
+        en = en[start_indx:]
+        m[indx] = order.mean()
+        sus[indx] = calc_sus(size, order, t)
+        e[indx] = en.mean()
+        c[indx] = calc_cap(size, en, t)
+        indx += 1
+    
+    return m, sus, e, c
 
-    # Plot energy vs. step
-    # plt.plot(energies)
-    # plt.xlabel('Step')
-    # plt.ylabel('Energy')
-    # plt.title('Energy vs. Step')
-    # plt.show()
+def simul_h(hs, size, initial, cycles, t):
+    
+   n_pontos = hs.size
+   # Inicializa os vetores para recolher os valores
+   m = np.zeros(n_pontos)
+   sus = np.zeros(n_pontos)
+   e = np.zeros(n_pontos)
+   c = np.zeros(n_pontos)
+   
+   start_indx = int(cycles / 10)
+   
+   indx = 0
+   for h in hs:
+       
+       _, order, en = simulation(size, initial, cycles, t, h)
+       
+       order = order[start_indx:]
+       en = en[start_indx:]
+       m[indx] = order.mean()
+       sus[indx] = calc_sus(size, order, t)
+       e[indx] = en.mean()
+       c[indx] = calc_cap(size, en, t)
+       indx += 1
+   
+   return m, sus, e, c
+    
 
-if __name__ == "__main__":
-    main()
+
+def hysteresis(hs, temps, size, initial, cycles):
+    
+    n_hs = hs.size
+    n_temps = temps.size
+    
+    # Initialize arrays to store values
+    m = np.zeros((n_temps, n_hs))
+    
+    
+    start_indx = int(cycles / 10)
+    
+    for i, t in enumerate(temps):
+        for j, h in enumerate(hs):
+            _, order, _ = simulation(size, initial, cycles, t, h)
+            order = order[start_indx:]
+            m[i, j] = order.mean()
+           
+    
+    return m
+
+# Define magnetic field strengths and temperatures
+#hs = np.arange(-5, 5.5, .5)
+temps = np.arange(0.5, 5.5, .1)  
+
+
+#m = hysteresis(hs, temps, 10, 2, 1000) 
+#fig3 = hyst_graph(m, hs, temps)
+
+
+m, sus, e, c = simulacao_temp(temps, 10, 3, 1000, 1)
+fig1 = ferro_graft(m, sus, e, c, temps)
+
+
+#m1, sus1, e1, c1 = simul_h(hs, 10, 2, 1000,1)
+#fig2 = ferro_grafh(m1, sus1, e1, c1, hs)
+plt.show()
+
+
+   
+  
+
+
+  
