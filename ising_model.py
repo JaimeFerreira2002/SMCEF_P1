@@ -7,6 +7,8 @@ def initialize_grid(size, initial):
     
     if initial == -1:
         return np.full((size, size, size), -1)
+    if initial == 1:
+        return np.full((size, size, size), 1)
     else:
         return np.full((size, size, size), np.random.choice([-1,1], size = (size, size, size)))
 
@@ -209,6 +211,15 @@ def hyst_graph(m, hs, temps):
     plt.ylabel('m')
     plt.legend()
     
+def tails_graph(m, hs, initials):
+    plt.figure(figsize=(12, 12))
+    for i, s in enumerate(initials):
+        plt.plot(hs, m[i], label=f'Spin: {s}')
+    plt.title('m vs h with different initial conditions')
+    plt.xlabel('h')
+    plt.ylabel('m')
+    plt.legend()
+    
     
     
 def simulacao_temp(temps, size, initial, nmax, h):
@@ -288,22 +299,46 @@ def hysteresis(hs, temps, size, initial, cycles):
     
     return m
 
+def tails(hs, temp, size, initials, cycles):
+    
+    n_hs = hs.size
+    n_initials = initials.size
+    
+    # Initialize arrays to store values
+    m = np.zeros((n_initials, n_hs))
+    
+    
+    start_indx = int(cycles / 10)
+    
+    for i, s in enumerate(initials):
+        for j, h in enumerate(hs):
+            _, order, _ = simulation(size, s, cycles, temp, h)
+            order = order[start_indx:]
+            m[i, j] = order.mean()
+            
+    return m
 # Define magnetic field strengths and temperatures
 hs = np.arange(-5, 5.5, .5)
-temps = np.arange(0.5, 5.5, .1)  
+temps = np.arange(0.5, 5.5, .5)  
+initials = np.arange(-1, 3, 2)
+
+m0 = hysteresis(hs, temps, 10, 2, 100) 
+fig0 = hyst_graph(m0, hs, temps)
 
 
-m = hysteresis(hs, temps, 10, 2, 1000) 
-#fig3 = hyst_graph(m, hs, temps)
+m, sus, e, c = simulacao_temp(temps, 10, 3, 100, 1)
+fig = ferro_graft(m, sus, e, c, temps)
 
 
-m, sus, e, c = simulacao_temp(temps, 10, 3, 1000, 1)
-fig1 = ferro_graft(m, sus, e, c, temps)
+m1, sus1, e1, c1 = simul_h(hs, 10, 2, 100,1)
+fig1 = ferro_grafh(m1, sus1, e1, c1, hs)
 
-
-m1, sus1, e1, c1 = simul_h(hs, 10, 2, 1000,1)
-fig2 = ferro_grafh(m1, sus1, e1, c1, hs)
+m2 = tails(hs, 1, 10, initials, 100)
+fig2 = tails_graph(m2, hs, initials)
 plt.show()
+
+
+
 
 
 
