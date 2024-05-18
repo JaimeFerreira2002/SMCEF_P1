@@ -4,6 +4,17 @@ import matplotlib.pyplot as plt
 
 
 def initialize_grid(size, initial):
+    """
+    Inicializa uma rede cúbica com um determinado tamanho.
+    
+    size - número de elementos numa aresta do cubo
+    initial - valor inicial de todos os elementos na rede: 1 ou -1.
+    Se o atributo for diferente desses dois valores, a rede será
+    gerada aleatoriamente.
+    
+    return: rede cúbica
+
+    """
     
     if initial == -1:
         return np.full((size, size, size), -1)
@@ -14,7 +25,15 @@ def initialize_grid(size, initial):
 
                
 def transitionvalues(t, h):
+    """
+    Gera uma tabela com todos os valores da função de transição possíveis.
     
+    t - temperatura reduzida
+    h - campo magnético externo reduzido
+    
+    return: tabela com os valores da função transição.
+    
+    """
     possible_values_sum = np.arange(-6, 8, 2)
     possible_spins = np.arange(-1, 3, 2)
     
@@ -26,17 +45,41 @@ def transitionvalues(t, h):
     
              
 def neighborstable(size):
+    """
+    Cria uma tabela com os indices dos vizinhos mais próximos
+    para uma rede.
+    
+    size - aresta da rede cúbica
+    
+    returns: tabela com os indices do vizinhos mais próximos na
+    direção positiva e direção negativa.
+    
+    """
     
     
-    positive = [i + 1 for i in range(size)]
+    positive = [i + 1 for i in range(size)] #Vizinho na direção positiva
     positive[-1] = 0
-    negative = [i - 1 for i in range(size)]
+    negative = [i - 1 for i in range(size)] #Vizinho na direção negativa
     
        
     return np.array([positive, negative])
 
 
 def w(sigma, sigmasum, transvalue):
+    """
+    Permite localizar o valor da função de transição para um elemento
+    com um dado sigma e soma dos sigmas dos vizinhos.
+    
+    sigma - valor do spin do elemento da rede (-1 ou 1)
+    sigasum - valor da soma dos spins dos vizinhos mais próximos
+    nas 3 direções.
+    transvalue - tabela com todos os valores possiveís para a funcão
+    de transição
+    
+    returns: valor de função de transição
+    
+    """
+    
     
     
     i = int(sigmasum / 2 + 3)
@@ -47,26 +90,52 @@ def w(sigma, sigmasum, transvalue):
 
 
  
-def calc_sus(size, order, t):
+def calc_sus(size, moment, t):
     """
-    ...
+    Calcula o valor da susceptibilidade magnética da rede cúbica.
+    
+    size - aresta da rede
+    moment - momento magnético
+    t- temperatura reduzida
+    
+    returns: susceptibilidade magnética.
+    
     """
     
-    return order.var() * size ** 3 / t
+    return moment.var() * size ** 3 / t
     
    
 
 def calc_cap(size, e, t):
     """
-    ...
+    Calcula o valor da capacidade térmica da rede cúbica.
+    
+    size- aresta da rede
+    e - energia
+    t - temperatura reduzida
+    
     """
 
     return e.var() / (size ** 3 * t ** 2)
     
 def cycle(grid, size, neighbors, transvalue, h):
+    """
+    Corre um ciclo de Monte Carlo para a simulação de ferromagnetismo.
+    
+    grid - rede cúbica
+    size - aresta da rede
+    neighbors - tabela com os indices dos vizinhos mais próximos
+    transvalue - valores possíveis de função de transição
+    h - campo magnético externo reduzido
+    
+    returns:
+    grid - rede cúbica após um ciclo
+    energy - energia total da rede após um ciclo
+    
+    """
     
     energy = 0
-    moment = 0
+    
     for i in range(size):
         for j in range(size):
             for k in range(size):
@@ -75,15 +144,15 @@ def cycle(grid, size, neighbors, transvalue, h):
             
                 sigmasum = grid[neighbors[0, i], j, k] + grid[neighbors[1, i], j, k] + grid[i, neighbors[0, j], k] + grid[i, neighbors[1, j], k] + grid[i, j, neighbors[0, k]] + grid[i, j, neighbors[1, k]]
                 sigmasum = sigmasum * sigma
-                moment += abs(sigmasum)
+               
                 
                 
-                energy_point = -0.5 * sigmasum - sigma * h 
+                energy_point = -0.5 * sigmasum - sigma * h #energia por ponto da rede
                 
                
-                p = np.random.random()
+                p = np.random.random() #aleatório entre 0 e 1
             
-                if p < w(sigma, sigmasum, transvalue):
+                if p < w(sigma, sigmasum, transvalue): #inversão de spin
                     grid[i, j, k] = -sigma 
                     energy_point = -energy_point
                     
@@ -94,7 +163,22 @@ def cycle(grid, size, neighbors, transvalue, h):
     return grid, energy
 
 def simulation(size, initial, cycles, t, h):
+    """
+    Corre uma simulação de ferromagnetismo com um dado número de
+    ciclos de Monte Carlo
     
+    size - aresta da rede
+    initial - variável de inicialização da rede
+    cycles - número de ciclos na simulação
+    t - temperatura reduzida
+    h - campo magnético externo reduzido
+    
+    returns:
+    grid - rede cúbica após a simulação
+    moment - lista com os momentos magnéticos da rede após cada ciclo
+    total_energy - lista com as energias totais da rede após cada ciclo
+    
+    """
     
     grid = initialize_grid(size, initial)
     
@@ -103,25 +187,26 @@ def simulation(size, initial, cycles, t, h):
     neighbors = neighborstable(size)
     
    
-    order = np.zeros(cycles)
+    moment = np.zeros(cycles)
     total_energy = np.zeros(cycles)
     
     
     for i in range(cycles):
         
-        grelha, energy = cycle(grid, size, neighbors, transvalue, h)
+        grid, energy = cycle(grid, size, neighbors, transvalue, h)
         
        
         total_energy[i] = energy
-        order[i] = 2 * grid[grid == 1].shape[0] - size ** 3
+        moment[i] = 2 * grid[grid == 1].shape[0] - size ** 3 #momento magnético
+        
         
     
-    order /= size**3
+    moment /= size**3
     total_energy /= size **3
     
     
                 
-    return grid, order, total_energy
+    return grid, moment, total_energy
 
 
 def ferro_graft(m, sus, e, c, t):
@@ -222,29 +307,43 @@ def tails_graph(m, hs, initials):
     
     
     
-def simulacao_temp(temps, size, initial, nmax, h):
+def simulacao_temp(temps, size, initial, cycles, h):
     """
-    ...
+    Corre simulação de ferromagnetismo com um campo magnétco externo fixo
+    e para várias temperaturas reduzidas
+    
+    temps - lista com as temperaturas reduzidas a usar
+    size - aresta da rede
+    initial - variável de inicialização
+    cycles - número de ciclos
+    h - campo magnético externo reduzido
+    
+    returns:
+    m - lista com momentos magnéticos médios após cada simulação
+    sus - lista com susceptibilidades magnéticas médias após cada simulação
+    e - lista com energias totais médias após cada simulação
+    c - lista com capacidades térmicas médias após cada simulação
     """
     
     n_pontos = temps.size
-    # Inicializa os vetores para recolher os valores
+    
+    # armazenar valores
     m = np.zeros(n_pontos)
     sus = np.zeros(n_pontos)
     e = np.zeros(n_pontos)
     c = np.zeros(n_pontos)
     
-    start_indx = int(nmax / 100)
+    start_indx = int(cycles / 100)
     
     indx = 0
     for t in temps:
         
-        _, order, en = simulation(size, initial, nmax, t, h)
+        _, moment, en = simulation(size, initial, cycles, t, h)
         
-        order = np.abs(order[start_indx:])
+        moment = np.abs(moment[start_indx:])
         en = en[start_indx:]
-        m[indx] = order.mean()
-        sus[indx] = calc_sus(size, order, t)
+        m[indx] = moment.mean()
+        sus[indx] = calc_sus(size, moment, t)
         e[indx] = en.mean()
         c[indx] = calc_cap(size, en, t)
         indx += 1
@@ -252,91 +351,164 @@ def simulacao_temp(temps, size, initial, nmax, h):
     return m, sus, e, c
 
 def simul_h(hs, size, initial, cycles, t):
+    """
+    Corre simulação de ferromagnetismo com uma temperatura reduzida fixa
+    e para vários campos magnéticos externos reduzidos
     
-   n_pontos = hs.size
-   # Inicializa os vetores para recolher os valores
-   m = np.zeros(n_pontos)
-   sus = np.zeros(n_pontos)
-   e = np.zeros(n_pontos)
-   c = np.zeros(n_pontos)
+    hss - lista com os campos magnéticos reduzidos a usar
+    size - aresta da rede
+    initial - variável de inicialização
+    cycles - número de ciclos
+    t - temperatura reduzida
+    
+    returns:
+    m - lista com momentos magnéticos médios após cada simulação
+    sus - lista com susceptibilidades magnéticas médias após cada simulação
+    e - lista com energias totais médias após cada simulação
+    c - lista com capacidades térmicas médias após cada simulação
+    """
+    
+    n_pontos = hs.size
+    
+    # armazenar valores
+    m = np.zeros(n_pontos)
+    sus = np.zeros(n_pontos)
+    e = np.zeros(n_pontos)
+    c = np.zeros(n_pontos)
    
-   start_indx = int(cycles / 10)
+    start_indx = int(cycles / 10)
    
-   indx = 0
-   for h in hs:
+    indx = 0
+    for h in hs:
        
-       _, order, en = simulation(size, initial, cycles, t, h)
+        _, moment, en = simulation(size, initial, cycles, t, h)
        
-       order = order[start_indx:]
-       en = en[start_indx:]
-       m[indx] = order.mean()
-       sus[indx] = calc_sus(size, order, t)
-       e[indx] = en.mean()
-       c[indx] = calc_cap(size, en, t)
-       indx += 1
+        moment = moment[start_indx:]
+        en = en[start_indx:]
+        m[indx] = moment.mean()
+        sus[indx] = calc_sus(size, moment, t)
+        e[indx] = en.mean()
+        c[indx] = calc_cap(size, en, t)
+        indx += 1
    
-   return m, sus, e, c
+    return m, sus, e, c
     
 
 
 def hysteresis(hs, temps, size, initial, cycles):
+    """
+    Corre a simulação de ferromagnetismo para vários valores de campo magnético
+    reduzido e temperatura reduzida.
+    
+    hs - lista com os valores de campo magnético reduzido a usar
+    temps - lista com os valores de temperatura reduzida a usar
+    size - aresta da rede
+    initial - variável de inicialização
+    cycles - número de ciclos
+    
+    returns: tabela com os valores de momento magnético em função do campo
+    magnético externo reduzido para várias temperaturas reduzidas
+    """
     
     n_hs = hs.size
     n_temps = temps.size
     
-    # Initialize arrays to store values
-    m = np.zeros((n_temps, n_hs))
+   
+    m = np.zeros((n_temps, n_hs)) # armazenar valores
     
     
     start_indx = int(cycles / 10)
     
     for i, t in enumerate(temps):
         for j, h in enumerate(hs):
-            _, order, _ = simulation(size, initial, cycles, t, h)
-            order = order[start_indx:]
-            m[i, j] = order.mean()
+            _, moment, _ = simulation(size, initial, cycles, t, h)
+            moment = moment[start_indx:]
+            m[i, j] = moment.mean()
            
     
     return m
 
 def tails(hs, temp, size, initials, cycles):
+    """
+    Corre a simulação de ferromagnetismo com temperatura reduzida fixa para
+    ambas as condições de inicialização e rede.
+    
+    hs - valores de campo magnético reduzido a usar
+    temp - temperatura reduzida
+    size - aresta da rede
+    initials - valores de inicialização de rede (-1 e 1)
+    cycles - número de ciclos
+    
+    returns: tabela com os valores de momento magnético em função do campo
+    magnético externo reduzido para ambas as condições de inicialização.
+    
+    """
     
     n_hs = hs.size
     n_initials = initials.size
     
-    # Initialize arrays to store values
-    m = np.zeros((n_initials, n_hs))
+    
+    m = np.zeros((n_initials, n_hs)) # armazenar valores
     
     
     start_indx = int(cycles / 10)
     
     for i, s in enumerate(initials):
         for j, h in enumerate(hs):
-            _, order, _ = simulation(size, s, cycles, temp, h)
-            order = order[start_indx:]
-            m[i, j] = order.mean()
+            _, moment, _ = simulation(size, s, cycles, temp, h)
+            moment = moment[start_indx:]
+            m[i, j] = moment.mean()
             
     return m
+
+
+def curieT(sus, temps):
+    """
+    Determina a temperatura de Curie
+    
+    sus - lista com susceptibilidades magnéticas médias
+    temps - lista de temperaturas correspondentes às susceptibilidades magnéticas
+    
+    returns: Temperatura de Curie
+    
+    """
+        
+    
+    
+    maxsus = max(sus)
+    curieindex = np.where(sus == maxsus)
+    curieT = temps[curieindex]
+    return curieT
+
 # Define magnetic field strengths and temperatures
 hs = np.arange(-5, 5.5, .5)
 temps = np.arange(0.5, 5.5, .5)  
 initials = np.arange(-1, 3, 2)
+cycles = 100
+size = 10
 
-m0 = hysteresis(hs, temps, 10, 2, 100) 
+#### testes #####
+m0 = hysteresis(hs, temps, size, 2, cycles) 
 fig0 = hyst_graph(m0, hs, temps)
 
 
-m, sus, e, c = simulacao_temp(temps, 10, 3, 100, 1)
+m, sus, e, c = simulacao_temp(temps, size, 3, cycles, 1)
 fig = ferro_graft(m, sus, e, c, temps)
+curie = curieT(sus, temps)
+print(curie)
 
 
-m1, sus1, e1, c1 = simul_h(hs, 10, 2, 100,1)
+m1, sus1, e1, c1 = simul_h(hs, 10, 2, cycles,1)
 fig1 = ferro_grafh(m1, sus1, e1, c1, hs)
 
-m2 = tails(hs, 1, 10, initials, 100)
+m2 = tails(hs, 1, 10, initials, cycles)
 fig2 = tails_graph(m2, hs, initials)
 plt.show()
 
+
+
+ 
+ 
 
 
 
