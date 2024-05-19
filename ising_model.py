@@ -487,59 +487,70 @@ initials = np.arange(-1, 3, 2)
 cycles = 10
 size = 10
 
-#Define Functions
-def fun1 ():
-   print("Runnning f1")
-   m0 = hysteresis(hs, temps, size, 2, cycles) 
-   hyst_graph(m0, hs, temps)
-   print("Finished f1")
-
-def fun2():
-   print("Runnning f2")
-   m, sus, e, c = simulacao_temp(temps, size, 3, 10, 1)
-   ferro_graft(m, sus, e, c, temps)
-   curie = curieT(sus, temps)
-   print(curie)
-   print("Finished f2")
+# Function to calculate Curie temperature
+def curieT(sus, temps):
+    return temps[np.argmax(sus)]
 
 
-def fun3():
-   print("Runnning f3")
-   m1, sus1, e1, c1 = simul_h(hs, size, 2, cycles,1)
-   ferro_grafh(m1, sus1, e1, c1, hs)
-   print("Finished f3")
+def fun1(hs, temps, size, cycles):
+    print("Running f1")
+    m0 = hysteresis(hs, temps, size, 2, cycles)
+    print("Finished f1")
+    return m0
 
- 
 
-def fun4():
-   print("Runnning f4")
-   m2 = tails(hs, 1, size, initials, cycles)
-   tails_graph(m2, hs, initials)
-   print("Finished f4")
+def fun2(temps, size):
+    print("Running f2")
+    m, sus, e, c = simulacao_temp(temps, size, 3, 10, 1)
+    curie = curieT(sus, temps)
+    print("Curie Temperature:", curie)
+    print("Finished f2")
+    return m, sus, e, c
 
+
+def fun3(hs, size, cycles):
+    print("Running f3")
+    m1, sus1, e1, c1 = simul_h(hs, size, 2, cycles, 1)
+    print("Finished f3")
+    return m1, sus1, e1, c1
+
+
+def fun4(hs, size, initials, cycles):
+    print("Running f4")
+    m2 = tails(hs, 1, size, initials, cycles)
+    print("Finished f4")
+    return m2
 
 
 if __name__ == '__main__':
+    hs = np.arange(-5, 5.5, .5)
+    temps = np.arange(0.5, 5.5, .5)
+    initials = np.arange(-1, 3, 2)
+    size = 10
+    cycles = 100
+
+    start_time = time.time()
+
+    # Create a multiprocessing pool
+    with multiprocessing.Pool(processes=4) as pool:
+        result1 = pool.apply_async(fun1, (hs, temps, size, cycles))
+        result2 = pool.apply_async(fun2, (temps, size))
+        result3 = pool.apply_async(fun3, (hs, size, cycles))
+        result4 = pool.apply_async(fun4, (hs, size, initials, cycles))
+
+        # Retrieve the results
+        m0 = result1.get()
+        m, sus, e, c = result2.get()
+        m1, sus1, e1, c1 = result3.get()
+        m2 = result4.get()
+
+    # Plotting outside the multiprocessing pool
+    hyst_graph(m0, hs, temps)
+    ferro_graft(m, sus, e, c, temps)
+    ferro_grafh(m1, sus1, e1, c1, hs)
+    tails_graph(m2, hs, initials)
+
    
-   start_time = time.time()
-   # Create Processes
-   process1 = multiprocessing.Process(target=fun1)
-   process2 = multiprocessing.Process(target=fun2)
-   process3 = multiprocessing.Process(target=fun3)
-   process4 = multiprocessing.Process(target=fun4)
-
-   # Start Processes
-   process1.start()
-   process2.start()
-   process3.start()
-   process4.start()
-
-   # Join Processes
-   process1.join()
-   process2.join()
-   process3.join()
-   process4.join()
-
-   end_time = time.time()
-   print("Total execution time with multiprocessing: {:.2f} seconds".format(end_time - start_time))
+    end_time = time.time()
+    print("Total execution time with multiprocessing: {:.2f} seconds".format(end_time - start_time))
 
