@@ -307,7 +307,6 @@ def tails_graph(m, hs, initials):
     
     
     
-
 def simulacao_temp(temps, size, initial, cycles, h):
     """
     Corre simulação de ferromagnetismo com um campo magnétco externo fixo
@@ -510,6 +509,7 @@ def fun3():
    ferro_grafh(m1, sus1, e1, c1, hs)
    print("Finished f3")
 
+ 
 
 def fun4():
    print("Runnning f4")
