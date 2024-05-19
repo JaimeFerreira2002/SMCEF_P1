@@ -496,7 +496,7 @@ def fun1 ():
 
 def fun2():
    print("Runnning f2")
-   m, sus, e, c = simulacao_temp(temps, size, 3, 10, 1)
+   m, sus, e, c = simulacao_temp(temps, size, 3, cycles, 1)
    ferro_graft(m, sus, e, c, temps)
    curie = curieT(sus, temps)
    print(curie)
